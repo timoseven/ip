@@ -57,7 +57,9 @@ except Exception as e:
 @app.route('/ip', methods=['GET', 'POST'])
 def index():
     result = {}
+    
     if request.method == 'POST':
+        # 处理表单提交的IP
         ips = request.form.get('ips', '').strip().split('\n')
         ips = [ip.strip() for ip in ips if ip.strip()]
         ips = ips[:10]  # 最多处理10个IP
@@ -69,6 +71,21 @@ def index():
                 'ip2location': query_ip2location(ip),
                 'ip2region': query_ip2region(ip)
             }
+    else:
+        # 默认访问时，显示用户当前IP
+        # 获取用户真实IP
+        user_ip = request.remote_addr
+        if not user_ip or user_ip == '127.0.0.1' or user_ip == '::1':
+            # 尝试从X-Forwarded-For等头信息获取真实IP
+            user_ip = request.headers.get('X-Real-IP') or request.headers.get('X-Forwarded-For', '').split(',')[0].strip() or user_ip
+        
+        # 查询用户IP信息
+        result[user_ip] = {
+            'geolite2': query_geolite2(user_ip),
+            'dbip': query_dbip(user_ip),
+            'ip2location': query_ip2location(user_ip),
+            'ip2region': query_ip2region(user_ip)
+        }
     
     return render_template_string('''
         <!DOCTYPE html>
@@ -356,6 +373,9 @@ def index():
                 <header>
                     <h1>IP查询工具</h1>
                     <p>支持最多10个IP地址的批量查询，包括IPv4和IPv6</p>
+                    {% if request.method == 'GET' and result %}
+                    <p style="margin-top: 10px; font-weight: 600;">你的IP是: {% for ip in result.keys() %}{{ ip }}{% endfor %}</p>
+                    {% endif %}
                 </header>
                 
                 <main>

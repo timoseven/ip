@@ -2,4 +2,5 @@ Flask
 maxminddb
 ip2location
 werkzeug
-git+https://gitee.com/lionsoul/ip2region.git#subdirectory=binding/python
+gunicorn
+git+https://github.com/lionsoul2014/ip2region.git#subdirectory=binding/python
