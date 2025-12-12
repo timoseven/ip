@@ -5,6 +5,7 @@ import os
 import socket
 from ip2region.searcher import new_with_file_only
 from ip2region.util import load_header_from_file, version_from_header
+from ipdb import City
 
 app = Flask(__name__)
 
@@ -17,7 +18,8 @@ DB_PATH = {
     'ip2location_v4': './db/ip2location/IP2LOCATION-LITE-DB11.BIN',
     'ip2location_v6': './db/ip2location/IP2LOCATION-LITE-DB11.IPV6.BIN',
     'ip2region_v4': './db/ip2region/ip2region_v4.xdb',
-    'ip2region_v6': './db/ip2region/ip2region_v6.xdb'
+    'ip2region_v6': './db/ip2region/ip2region_v6.xdb',
+    'ipip_free': './db/ipip/ipipfree.ipdb'
 }
 
 # 初始化IP库读取器
@@ -54,6 +56,12 @@ try:
 except Exception as e:
     print(f"Error opening ip2region files: {e}")
 
+# 初始化ipip.net读取器
+try:
+    readers['ipip_free'] = City(DB_PATH['ipip_free'])
+except Exception as e:
+    print(f"Error opening ipip.net files: {e}")
+
 @app.route('/ip', methods=['GET', 'POST'])
 def index():
     result = {}
@@ -69,7 +77,8 @@ def index():
                 'geolite2': query_geolite2(ip),
                 'dbip': query_dbip(ip),
                 'ip2location': query_ip2location(ip),
-                'ip2region': query_ip2region(ip)
+                'ip2region': query_ip2region(ip),
+                'ipip': query_ipip(ip)
             }
     else:
         # 默认访问时，显示用户当前IP
@@ -84,7 +93,8 @@ def index():
             'geolite2': query_geolite2(user_ip),
             'dbip': query_dbip(user_ip),
             'ip2location': query_ip2location(user_ip),
-            'ip2region': query_ip2region(user_ip)
+            'ip2region': query_ip2region(user_ip),
+            'ipip': query_ipip(user_ip)
         }
     
     return render_template_string('''
@@ -499,6 +509,29 @@ def index():
                                     </ul>
                                     {% endif %}
                                 </div>
+                                
+                                <!-- ipip.net -->
+                                <div class="database-result">
+                                    <div class="database-name">5. ipip.net</div>
+                                    {% if data.ipip.error %}
+                                    <div class="error">{{ data.ipip.error }}</div>
+                                    {% else %}
+                                    <ul class="info-list">
+                                        {% if data.ipip.country %}
+                                        <li class="info-item"><span class="info-label">国家:</span> {{ data.ipip.country }}</li>
+                                        {% endif %}
+                                        {% if data.ipip.region %}
+                                        <li class="info-item"><span class="info-label">地区:</span> {{ data.ipip.region }}</li>
+                                        {% endif %}
+                                        {% if data.ipip.city %}
+                                        <li class="info-item"><span class="info-label">城市:</span> {{ data.ipip.city }}</li>
+                                        {% endif %}
+                                        {% if data.ipip.isp %}
+                                        <li class="info-item"><span class="info-label">ISP:</span> {{ data.ipip.isp }}</li>
+                                        {% endif %}
+                                    </ul>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                         {% endfor %}
@@ -698,6 +731,34 @@ def query_ip2region(ip):
         return result
     except Exception as e:
         return {'error': str(e)}
+
+def query_ipip(ip):
+    """使用ipip.net查询IP信息"""
+    try:
+        if 'ipip_free' not in readers:
+            return {'error': 'ipip.net数据库未加载'}
+        
+        # 查询IP信息，使用中文
+        data = readers['ipip_free'].find_map(ip, 'CN')
+        if not data:
+            return {'error': '未找到信息'}
+        
+        # 构建结果
+        result = {}
+        if data.get('country_name'):
+            result['country'] = data['country_name']
+        if data.get('region_name'):
+            result['region'] = data['region_name']
+        if data.get('city_name'):
+            result['city'] = data['city_name']
+        
+        # 如果没有提取到任何信息，返回错误
+        if not result:
+            return {'error': '未找到信息'}
+        
+        return result
+    except Exception as e:
+        return {'error': f'查询错误: {str(e)}'}
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5002)

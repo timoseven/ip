@@ -19,6 +19,7 @@
   - db-ip
   - ip2location
   - ip2region
+  - ipip.net
 - **前端**: HTML5 + CSS3
 
 ## 项目结构
@@ -31,9 +32,14 @@ ip/
 │   ├── GeoLite2/       # GeoLite2数据库
 │   ├── db-ip/          # db-ip数据库
 │   ├── ip2location/    # ip2location数据库
-│   └── ip2region/      # ip2region数据库
+│   ├── ip2region/      # ip2region数据库
+│   └── ipip/           # ipip.net数据库
 └── venv/               # Python虚拟环境
 ```
+
+## 数据库下载
+
+如果需要下载IP数据库文件，请访问 `https://download.timoq.com/ipdb/`，将对应的数据库文件放入到项目的 `db` 目录下。
 
 ## 安装和运行
 
@@ -56,11 +62,11 @@ pip install -r requirements.txt
 python app.py
 ```
 
-应用将运行在 `http://127.0.0.1:5001/ip`
+应用将运行在 `http://127.0.0.1:5002/ip`
 
 ## 使用方法
 
-1. 在浏览器中访问 `http://127.0.0.1:5001/ip`
+1. 在浏览器中访问 `http://127.0.0.1:5002/ip`
 2. 在文本框中输入IP地址，每行一个，最多10个
 3. 点击"查询"按钮查看结果
 4. 查询结果将按数据库分类显示
@@ -90,6 +96,12 @@ python app.py
 - 邮编
 
 ### ip2region
+- 国家
+- 地区
+- 城市
+- ISP
+
+### ipip.net
 - 国家
 - 地区
 - 城市
