@@ -19,7 +19,8 @@ DB_PATH = {
     'ip2location_v6': './db/ip2location/IP2LOCATION-LITE-DB11.IPV6.BIN',
     'ip2region_v4': './db/ip2region/ip2region_v4.xdb',
     'ip2region_v6': './db/ip2region/ip2region_v6.xdb',
-    'ipip_free': './db/ipip/ipipfree.ipdb'
+    'ipip_free': './db/ipip/ipipfree.ipdb',
+    'qqwry': './db/qqwry/qqwry.ipdb'
 }
 
 # 初始化IP库读取器
@@ -62,6 +63,13 @@ try:
 except Exception as e:
     print(f"Error opening ipip.net files: {e}")
 
+# 初始化qqwry读取器
+try:
+    readers['qqwry'] = City(DB_PATH['qqwry'])
+    print(f"✓ qqwry database initialized successfully from {DB_PATH['qqwry']}")
+except Exception as e:
+    print(f"Error initializing qqwry database: {e}")
+
 @app.route('/ip', methods=['GET', 'POST'])
 def index():
     result = {}
@@ -78,7 +86,8 @@ def index():
                 'dbip': query_dbip(ip),
                 'ip2location': query_ip2location(ip),
                 'ip2region': query_ip2region(ip),
-                'ipip': query_ipip(ip)
+                'ipip': query_ipip(ip),
+                'qqwry': query_qqwry(ip)
             }
     else:
         # 默认访问时，显示用户当前IP
@@ -94,7 +103,8 @@ def index():
             'dbip': query_dbip(user_ip),
             'ip2location': query_ip2location(user_ip),
             'ip2region': query_ip2region(user_ip),
-            'ipip': query_ipip(user_ip)
+            'ipip': query_ipip(user_ip),
+            'qqwry': query_qqwry(user_ip)
         }
     
     return render_template_string('''
@@ -532,6 +542,34 @@ def index():
                                     </ul>
                                     {% endif %}
                                 </div>
+                                
+                                <!-- qqwry -->
+                                <div class="database-result">
+                                    <div class="database-name">6. qqwry</div>
+                                    {% if data.qqwry.error %}
+                                    <div class="error">{{ data.qqwry.error }}</div>
+                                    {% else %}
+                                    <ul class="info-list">
+                                        {% if data.qqwry.country %}
+                                        <li class="info-item"><span class="info-label">国家:</span> {{ data.qqwry.country }}</li>
+                                        {% endif %}
+                                        {% if data.qqwry.region %}
+                                        <li class="info-item"><span class="info-label">地区:</span> {{ data.qqwry.region }}</li>
+                                        {% endif %}
+                                        {% if data.qqwry.city %}
+                                        <li class="info-item"><span class="info-label">城市:</span> {{ data.qqwry.city }}</li>
+                                        {% endif %}
+                                        {% if data.qqwry.district %}
+                                        <li class="info-item"><span class="info-label">区县:</span> {{ data.qqwry.district }}</li>
+                                        {% endif %}
+                                        {% if data.qqwry.isp %}
+                                        <li class="info-item"><span class="info-label">ISP:</span> {{ data.qqwry.isp }}</li>
+                                        {% endif %}
+                                    </ul>
+                                    {% endif %}
+                                </div>
+                                
+
                             </div>
                         </div>
                         {% endfor %}
@@ -751,6 +789,8 @@ def query_ipip(ip):
             result['region'] = data['region_name']
         if data.get('city_name'):
             result['city'] = data['city_name']
+        if data.get('isp_domain'):
+            result['isp'] = data['isp_domain']
         
         # 如果没有提取到任何信息，返回错误
         if not result:
@@ -759,6 +799,40 @@ def query_ipip(ip):
         return result
     except Exception as e:
         return {'error': f'查询错误: {str(e)}'}
+
+def query_qqwry(ip):
+    """使用qqwry数据库查询IP信息"""
+    try:
+        if 'qqwry' not in readers:
+            return {'error': 'qqwry数据库未加载'}
+        
+        # 查询IP信息，使用中文
+        data = readers['qqwry'].find_map(ip, 'CN')
+        if not data:
+            return {'error': '未找到信息'}
+        
+        # 构建结果
+        result = {}
+        if data.get('country_name'):
+            result['country'] = data['country_name']
+        if data.get('region_name'):
+            result['region'] = data['region_name']
+        if data.get('city_name'):
+            result['city'] = data['city_name']
+        if data.get('isp_domain'):
+            result['isp'] = data['isp_domain']
+        if data.get('district_name'):
+            result['district'] = data['district_name']
+        
+        # 如果没有提取到任何信息，返回错误
+        if not result:
+            return {'error': '未找到信息'}
+        
+        return result
+    except Exception as e:
+        return {'error': f'查询错误: {str(e)}'}
+
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5002)
